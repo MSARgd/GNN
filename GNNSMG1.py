@@ -12,6 +12,13 @@ import numpy as np
 import networkx as nx
 from deap import algorithms, base, creator, tools
 import matplotlib.pyplot as plt  # Import Matplotlib for plotting
+import matplotlib.cm as cm
+
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import tensorflow as tf
+import numpy as np
 
 tf.keras.backend.clear_session()
 
@@ -53,6 +60,48 @@ class GNNModel(Model):
         return x
 
 # Function to preprocess the data
+# def preprocess_data(num_agents, num_substations):
+#     # Generate random agent data
+#     agent_data = {
+#         'chromosome': [generate_chromosome() for _ in range(num_agents)]
+#     }
+    
+#     # Generate random substation data
+#     substation_data = {
+#         'connectivity': [np.random.randint(0, num_agents, size=np.random.randint(1, num_agents)).tolist() for _ in range(num_substations)]
+#     }
+
+#     # Create a graph
+#     G = nx.Graph()
+
+#     # Add nodes (agents) to the graph
+#     for i in range(num_agents):
+#         G.add_node(f'Agent_{i}', **{k: v[i] for k, v in agent_data.items()})
+
+#     # Add nodes (substations) to the graph
+#     for i in range(num_substations):
+#         G.add_node(f'Substation_{i}', connectivity=substation_data['connectivity'][i])
+
+#     # Add edges to the graph
+#     edge_index = []
+#     for i in range(num_substations):
+#         for j in substation_data['connectivity'][i]:
+#             G.add_edge(f'Substation_{i}', f'Agent_{j}')
+#             edge_index.append((i, j))  # Fixing the edge_index format
+
+#     # Convert edge list to tensor
+#     edge_index = tf.convert_to_tensor(edge_index, dtype=tf.int32)
+
+#     # Generate one-hot encoded edge features
+#     edge_features = generate_edge_features(edge_index)
+    
+#     # Convert node features to tensor
+#     node_features = tf.convert_to_tensor([agent_data['chromosome'][i] for i in range(num_agents)], dtype=tf.float32)
+
+#     # Return node features, edge indices, and edge features
+#     return node_features, edge_index, edge_features
+
+# Function to preprocess the data
 def preprocess_data(num_agents, num_substations):
     # Generate random agent data
     agent_data = {
@@ -75,11 +124,11 @@ def preprocess_data(num_agents, num_substations):
     for i in range(num_substations):
         G.add_node(f'Substation_{i}', connectivity=substation_data['connectivity'][i])
 
-    # Add edges to the graph
+    # Add edges to the graph with initial weight of 0
     edge_index = []
     for i in range(num_substations):
         for j in substation_data['connectivity'][i]:
-            G.add_edge(f'Substation_{i}', f'Agent_{j}')
+            G.add_edge(f'Substation_{i}', f'Agent_{j}', weight=0)  # Initialize the 'weight' attribute for each edge
             edge_index.append((i, j))  # Fixing the edge_index format
 
     # Convert edge list to tensor
@@ -93,6 +142,7 @@ def preprocess_data(num_agents, num_substations):
 
     # Return node features, edge indices, and edge features
     return node_features, edge_index, edge_features
+
 
 # Function to generate random agent chromosome
 def generate_chromosome():
@@ -108,6 +158,45 @@ def generate_edge_features(edge_index):
 # Function to train the GNN model and plot the graph at each epoch
 # Function to train the GNN model and plot the graph at each epoch
 # Function to train the GNN model and plot the graph at each epoch
+# def train_gnn(model, data, optimizer, criterion, epochs):
+#     node_features, edge_index, edge_features = data
+#     loss_values = []  # Store loss values
+
+#     for epoch in range(epochs):
+#         # Create a new graph for each epoch
+#         G = nx.Graph()
+#         for i in range(node_features.shape[0]):
+#             G.add_node(i, pos=(node_features[i][0], node_features[i][1]))  # Assume node_features contain x-y coordinates
+#         for i, j in edge_index.numpy():
+#             G.add_edge(i, j)
+#         pos = nx.get_node_attributes(G, 'pos')
+
+#         with tf.GradientTape() as tape:
+#             predictions = model(node_features, edge_index, edge_features)
+#             loss = criterion(tf.zeros(len(predictions)), predictions)  # Assuming labels are all zeros for placeholder
+#         gradients = tape.gradient(loss, model.trainable_variables)
+#         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+#         loss_values.append(loss.numpy())  # Append loss value
+#         print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
+
+#         # Update graph with new edge weights if they've changed during training
+#         updated_edge_weights = model(node_features, edge_index, edge_features).numpy()
+#         print(f"Updated Edge Weights at Epoch {epoch+1}:\n{updated_edge_weights}")
+
+#         for (i, j), weight in zip(edge_index.numpy(), updated_edge_weights):
+#             if G.has_edge(i, j):
+#                 G[i][j]['weight'] = weight
+
+#         # Plot the graph
+#         plt.figure()
+#         nx.draw(G, pos, with_labels=True)
+#         plt.title(f'Graph at Epoch {epoch+1}')
+#         plt.show()
+
+#     return loss_values
+
+
+
 def train_gnn(model, data, optimizer, criterion, epochs):
     node_features, edge_index, edge_features = data
     loss_values = []  # Store loss values
@@ -118,7 +207,7 @@ def train_gnn(model, data, optimizer, criterion, epochs):
         for i in range(node_features.shape[0]):
             G.add_node(i, pos=(node_features[i][0], node_features[i][1]))  # Assume node_features contain x-y coordinates
         for i, j in edge_index.numpy():
-            G.add_edge(i, j)
+            G.add_edge(i, j, weight=0)  # Initialize the 'weight' attribute for each edge
         pos = nx.get_node_attributes(G, 'pos')
 
         with tf.GradientTape() as tape:
@@ -137,14 +226,16 @@ def train_gnn(model, data, optimizer, criterion, epochs):
             if G.has_edge(i, j):
                 G[i][j]['weight'] = weight
 
-        # Plot the graph
+        # Plot the graph with edge weights
         plt.figure()
-        nx.draw(G, pos, with_labels=True)
+        min_weight = np.min(updated_edge_weights.flatten())
+        max_weight = np.max(updated_edge_weights.flatten())
+        edge_colors = [cm.viridis((weight - min_weight) / (max_weight - min_weight)) for weight in updated_edge_weights.flatten()]
+        nx.draw(G, pos, with_labels=True, edge_color=edge_colors, width=2.0)
         plt.title(f'Graph at Epoch {epoch+1}')
         plt.show()
 
     return loss_values
-
 
 
 
