@@ -106,10 +106,21 @@ def generate_edge_features(edge_index):
 
 # Function to train the GNN model
 # Function to train the GNN model and plot the graph at each epoch
+# Function to train the GNN model and plot the graph at each epoch
+# Function to train the GNN model and plot the graph at each epoch
 def train_gnn(model, data, optimizer, criterion, epochs):
     node_features, edge_index, edge_features = data
     loss_values = []  # Store loss values
+
     for epoch in range(epochs):
+        # Create a new graph for each epoch
+        G = nx.Graph()
+        for i in range(node_features.shape[0]):
+            G.add_node(i, pos=(node_features[i][0], node_features[i][1]))  # Assume node_features contain x-y coordinates
+        for i, j in edge_index.numpy():
+            G.add_edge(i, j)
+        pos = nx.get_node_attributes(G, 'pos')
+
         with tf.GradientTape() as tape:
             predictions = model(node_features, edge_index, edge_features)
             loss = criterion(tf.zeros(len(predictions)), predictions)  # Assuming labels are all zeros for placeholder
@@ -118,18 +129,25 @@ def train_gnn(model, data, optimizer, criterion, epochs):
         loss_values.append(loss.numpy())  # Append loss value
         print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
 
+        # Update graph with new edge weights if they've changed during training
+        updated_edge_weights = model(node_features, edge_index, edge_features).numpy()
+        print(f"Updated Edge Weights at Epoch {epoch+1}:\n{updated_edge_weights}")
+
+        for (i, j), weight in zip(edge_index.numpy(), updated_edge_weights):
+            if G.has_edge(i, j):
+                G[i][j]['weight'] = weight
+
         # Plot the graph
-        G = nx.Graph()
-        for i in range(node_features.shape[0]):
-            G.add_node(i, pos=(node_features[i][0], node_features[i][1]))  # Assume node_features contain x-y coordinates
-        for i, j in edge_index.numpy():
-            G.add_edge(i, j)
-        pos = nx.get_node_attributes(G, 'pos')
+        plt.figure()
         nx.draw(G, pos, with_labels=True)
         plt.title(f'Graph at Epoch {epoch+1}')
         plt.show()
 
     return loss_values
+
+
+
+
 
 
 # Function to evaluate the genetic algorithm
