@@ -105,6 +105,7 @@ def generate_edge_features(edge_index):
     return edge_features
 
 # Function to train the GNN model
+# Function to train the GNN model and plot the graph at each epoch
 def train_gnn(model, data, optimizer, criterion, epochs):
     node_features, edge_index, edge_features = data
     loss_values = []  # Store loss values
@@ -116,7 +117,20 @@ def train_gnn(model, data, optimizer, criterion, epochs):
         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         loss_values.append(loss.numpy())  # Append loss value
         print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
+
+        # Plot the graph
+        G = nx.Graph()
+        for i in range(node_features.shape[0]):
+            G.add_node(i, pos=(node_features[i][0], node_features[i][1]))  # Assume node_features contain x-y coordinates
+        for i, j in edge_index.numpy():
+            G.add_edge(i, j)
+        pos = nx.get_node_attributes(G, 'pos')
+        nx.draw(G, pos, with_labels=True)
+        plt.title(f'Graph at Epoch {epoch+1}')
+        plt.show()
+
     return loss_values
+
 
 # Function to evaluate the genetic algorithm
 def evaluate_genetic_algorithm(chromosome):
