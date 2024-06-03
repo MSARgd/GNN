@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jun  1 20:49:02 2024
+
+@author: msa
+"""
+
+import networkx as nx
+import numpy as np
+
+# Generate random smart grid data
+num_agents = 6
+num_substations = 4
+
+# Define agent characteristics
+agent_data = {
+    'prod_energy': np.random.uniform(low=0.5, high=5, size=num_agents),
+    'stock_energy': np.random.uniform(low=0, high=10, size=num_agents),
+    'cons_energy': np.random.uniform(low=0.2, high=3, size=num_agents),
+    'gestion_charge': np.random.choice([True, False], size=num_agents),
+    'repartition_energy': np.random.uniform(low=0.1, high=0.9, size=num_agents),
+    'reactivite_signaux': np.random.uniform(low=0.5, high=1, size=num_agents),
+    'distance_transmission': np.random.uniform(low=1, high=10, size=num_agents),
+    'prevision_demande': np.random.uniform(low=0.8, high=1, size=num_agents)
+}
+
+# Define substation characteristics
+substation_data = {
+    'connectivity': [np.random.randint(0, num_agents, size=np.random.randint(1, num_agents)).tolist() for _ in range(num_substations)]
+}
+
+# Create a graph representing the smart grid network
+G = nx.Graph()
+
+# Add nodes for agents and substations
+for i in range(num_agents):
+    G.add_node(f'Agent_{i}', **{k: v[i] for k, v in agent_data.items()})
+
+for i in range(num_substations):
+    G.add_node(f'Substation_{i}', connectivity=substation_data['connectivity'][i])
+
+# Add edges between agents and substations based on connectivity
+for i in range(num_substations):
+    for j in substation_data['connectivity'][i]:
+        G.add_edge(f'Substation_{i}', f'Agent_{j}')
+        
+# Visualize the graph
+nx.draw(G, with_labels=True)
+
+
+
+
+
+# #!/usr/bin/env python3
+# # -*- coding: utf-8 -*-
+# """
+# Created on Sat Jun  1 20:49:02 2024
+
+# @author: msa
+# """
+
+# import networkx as nx
+# import numpy as np
+
+# # Generate random smart grid data
+# num_agents = 6
+# num_substations = 4
+
+# # Define agent characteristics
+# agent_data = {
+#     'prod_energy': np.random.uniform(low=0.5, high=5, size=num_agents),
+#     'stock_energy': np.random.uniform(low=0, high=10, size=num_agents),
+#     'cons_energy': np.random.uniform(low=0.2, high=3, size=num_agents),
+#     'gestion_charge': np.random.choice([True, False], size=num_agents),
+#     'repartition_energy': np.random.uniform(low=0.1, high=0.9, size=num_agents),
+#     'reactivite_signaux': np.random.uniform(low=0.5, high=1, size=num_agents),
+#     'distance_transmission': np.random.uniform(low=1, high=10, size=num_agents),
+#     'prevision_demande': np.random.uniform(low=0.8, high=1, size=num_agents)
+# }
+
+# # Define substation characteristics
+# substation_data = {
+#     'connectivity': np.random.randint(1, num_agents, size=num_substations)
+# }
+
+# # Create a graph representing the smart grid network
+# G = nx.Graph()
+
+# # Add nodes for agents and substations
+# for i in range(num_agents):
+#     G.add_node(f'Agent_{i}', **agent_data)
+
+# for i in range(num_substations):
+#     G.add_node(f'Substation_{i}', **substation_data)
+
+# # Add edges between agents and substations based on connectivity
+# for i in range(num_substations):
+#     for j in substation_data['connectivity'][i]:
+#         G.add_edge(f'Substation_{i}', f'Agent_{j}')
+        
+# # Visualize the graph
+# nx.draw(G, with_labels=True)
